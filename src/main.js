@@ -1,8 +1,10 @@
-import Vue from "vue";
-import App from "./App.vue";
+import express from "./express";
 
-Vue.config.productionTip = false;
+export default express;
 
-new Vue({
-  render: h => h(App)
-}).$mount("#app");
+/**
+ * import express from './express';
+ * import {mockData} from '../../mock';
+ * const app = express();
+ * app.mock('xhr', mockData);
+ */
