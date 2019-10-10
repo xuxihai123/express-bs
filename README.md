@@ -1,29 +1,59 @@
-# mock-server
-
-## Project setup
+# express-bs
 ```
-yarn install
+yarn add express-bs
 ```
 
-### Compiles and hot-reloads for development
+### mock map
 ```
-yarn run serve
+export default {
+  "GET /api/users": function(req, res) {
+    let query = req.query || {};
+    console.log(query);
+    return res.json({
+      limit: query.limit,
+      offset: query.offset,
+      list: [
+        {
+          username: "admin1",
+          sex: 1
+        },
+        {
+          username: "admin2",
+          sex: 0
+        }
+      ]
+    });
+  },
+  "GET /api/users/:id": (req, res) => {
+    console.log(req.params);
+    return res.json({
+      id: req.params.id,
+      username: "kenny"
+    });
+  },
+  "POST /api/users": (req, res) => {
+    console.log(req.body);
+    res.json({ status: "ok", message: "创建成功！" });
+  },
+  "DELETE /api/users/:id": (req, res) => {
+    // console.log(req.params.id);
+    res.json({ status: "ok", message: "删除成功！" });
+  },
+  "PUT /api/users/:id": (req, res) => {
+    // console.log(req.params.id);
+    // console.log(req.body);
+    res.json({ status: "ok", message: "修改成功！" });
+  }
+};
+
 ```
 
-### Compiles and minifies for production
+### usage
 ```
-yarn run build
-```
+import express from "../../src/main";
+import mockData from "../../mock";
 
-### Run your tests
-```
-yarn run test
-```
+const app = express();
+app.mock("xhr", mockData);
 
-### Lints and fixes files
 ```
-yarn run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).

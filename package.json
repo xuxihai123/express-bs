@@ -1,6 +1,8 @@
 {
   "name": "express-bs",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "main": "dist/express-bs.umd.js",
+  "module": "dist/express-bs.umd.js",
   "scripts": {
     "serve": "vue-cli-service serve example/main.js",
     "build": "vue-cli-service build --target lib --name express-bs --formats umd  src/main.js  --report",
