@@ -1,6 +1,6 @@
-import Util from "../utils";
-import HTTP_STATUS_CODES from "../http/status";
-import http from "../http";
+import Util from '../utils';
+import HTTP_STATUS_CODES from '../http/status';
+import http from '../http';
 
 export default function createServer(handler) {
   // 备份原生 XMLHttpRequest
@@ -16,10 +16,10 @@ export default function createServer(handler) {
     https://github.com/ariya/phantomjs/issues/11289
 */
   try {
-    new window.Event("custom");
+    new window.Event('custom');
   } catch (exception) {
     window.Event = function(type, bubbles, cancelable, detail) {
-      var event = document.createEvent("CustomEvent"); // MUST be 'CustomEvent'
+      var event = document.createEvent('CustomEvent'); // MUST be 'CustomEvent'
       event.initCustomEvent(type, bubbles, cancelable, detail);
       return event;
     };
@@ -35,28 +35,24 @@ export default function createServer(handler) {
     // The response's body is being received.
     LOADING: 3,
     // The data transfer has been completed or something went wrong during the transfer (e.g. infinite redirects).
-    DONE: 4
+    DONE: 4,
   };
 
-  var XHR_EVENTS = "readystatechange loadstart progress abort error load timeout loadend".split(
-    " "
-  );
-  var XHR_REQUEST_PROPERTIES = "timeout withCredentials".split(" ");
-  var XHR_RESPONSE_PROPERTIES = "readyState responseURL status statusText responseType response responseText responseXML".split(
-    " "
-  );
+  var XHR_EVENTS = 'readystatechange loadstart progress abort error load timeout loadend'.split(' ');
+  var XHR_REQUEST_PROPERTIES = 'timeout withCredentials'.split(' ');
+  var XHR_RESPONSE_PROPERTIES = 'readyState responseURL status statusText responseType response responseText responseXML'.split(' ');
 
   function MockXMLHttpRequest() {
     // 初始化 custom 对象，用于存储自定义属性
     this.custom = {
       events: {},
       requestHeaders: {},
-      responseHeaders: {}
+      responseHeaders: {},
     };
   }
 
   MockXMLHttpRequest._settings = {
-    timeout: "10-100"
+    timeout: '10-100',
     /*
         timeout: 50,
         timeout: '10-100',
@@ -87,21 +83,20 @@ export default function createServer(handler) {
       Util.extend(this.custom, {
         method: method,
         url: url,
-        async: typeof async === "boolean" ? async : true,
+        async: typeof async === 'boolean' ? async : true,
         username: username,
         password: password,
         options: {
           url: url,
-          type: method
-        }
+          type: method,
+        },
       });
 
       this.custom.timeout = (function(timeout) {
-        if (typeof timeout === "number") return timeout;
-        if (typeof timeout === "string" && !~timeout.indexOf("-"))
-          return parseInt(timeout, 10);
-        if (typeof timeout === "string" && ~timeout.indexOf("-")) {
-          var tmp = timeout.split("-");
+        if (typeof timeout === 'number') return timeout;
+        if (typeof timeout === 'string' && !~timeout.indexOf('-')) return parseInt(timeout, 10);
+        if (typeof timeout === 'string' && ~timeout.indexOf('-')) {
+          var tmp = timeout.split('-');
           var min = parseInt(tmp[0], 10);
           var max = parseInt(tmp[1], 10);
           return Math.round(Math.random() * (max - min)) + min;
@@ -109,15 +104,15 @@ export default function createServer(handler) {
       })(MockXMLHttpRequest._settings.timeout);
 
       var isMatch = handler.match(this.custom.url, this.custom.method);
-      console.log(
-        `xhr match: ${this.custom.method} ${this.custom.url}  ${isMatch}`
-      );
+      console.log(`xhr match: ${this.custom.method} ${this.custom.url}  ${isMatch}`);
       function handle(event) {
         // 同步属性 NativeXMLHttpRequest => MockXMLHttpRequest
         for (var i = 0; i < XHR_RESPONSE_PROPERTIES.length; i++) {
           try {
             that[XHR_RESPONSE_PROPERTIES[i]] = xhr[XHR_RESPONSE_PROPERTIES[i]];
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
         }
         // 触发 MockXMLHttpRequest 上的同名事件
         that.dispatchEvent(new Event(event.type /*, false, false, that*/));
@@ -142,7 +137,9 @@ export default function createServer(handler) {
         for (var j = 0; j < XHR_REQUEST_PROPERTIES.length; j++) {
           try {
             xhr[XHR_REQUEST_PROPERTIES[j]] = that[XHR_REQUEST_PROPERTIES[j]];
-          } catch (e) {}
+          } catch (e) {
+            //ignore
+          }
         }
 
         return;
@@ -151,9 +148,7 @@ export default function createServer(handler) {
       // 找到了匹配的数据模板，开始拦截 XHR 请求
       this.match = true;
       this.readyState = MockXMLHttpRequest.OPENED;
-      this.dispatchEvent(
-        new Event("readystatechange" /*, false, false, this*/)
-      );
+      this.dispatchEvent(new Event('readystatechange' /*, false, false, this*/));
     },
     // https://xhr.spec.whatwg.org/#the-setrequestheader()-method
     // Combines a header in author request headers.
@@ -166,7 +161,7 @@ export default function createServer(handler) {
 
       // 拦截 XHR
       var requestHeaders = this.custom.requestHeaders;
-      if (requestHeaders[name]) requestHeaders[name] += "," + value;
+      if (requestHeaders[name]) requestHeaders[name] += ',' + value;
       else requestHeaders[name] = value;
     },
     getReqRawHeaders: function() {
@@ -193,9 +188,9 @@ export default function createServer(handler) {
 
       // 拦截 XHR
       // X-Requested-With header
-      this.setRequestHeader("X-Requested-With", "MockXMLHttpRequest");
+      this.setRequestHeader('X-Requested-With', 'MockXMLHttpRequest');
       // loadstart The fetch initiates.
-      this.dispatchEvent(new Event("loadstart" /*, false, false, this*/));
+      this.dispatchEvent(new Event('loadstart' /*, false, false, this*/));
 
       var rawHeaders = this.getReqRawHeaders();
       var request = new http.IncomingMessage();
@@ -203,36 +198,38 @@ export default function createServer(handler) {
       request.method = this.custom.method;
       request.url = this.custom.url;
       request.rawHeaders = rawHeaders;
-      request.httpVersion = "1.1";
+      request.rawBody = data;
+      var contentType = request.headers['Content-Type'];
+      if (/json/.test(contentType)) {
+        try {
+          request.body = JSON.parse(data);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      request.httpVersion = '1.1';
       var response = new http.ServerResponse(request);
 
-      response.once("finish", done);
+      response.once('finish', done);
 
       handler(request, response);
 
-      function done(err) {
+      function done() {
         that.readyState = MockXMLHttpRequest.HEADERS_RECEIVED;
-        that.dispatchEvent(
-          new Event("readystatechange" /*, false, false, that*/)
-        );
+        that.dispatchEvent(new Event('readystatechange' /*, false, false, that*/));
         that.readyState = MockXMLHttpRequest.LOADING;
-        that.dispatchEvent(
-          new Event("readystatechange" /*, false, false, that*/)
-        );
+        that.dispatchEvent(new Event('readystatechange' /*, false, false, that*/));
 
         that.status = 200;
         that.statusText = HTTP_STATUS_CODES[200];
 
-        that.responseHeaders = that.custom.responseHeaders =
-          response.responseHeaders;
+        that.responseHeaders = that.custom.responseHeaders = response.responseHeaders;
         that.response = that.responseText = response.respData;
 
         that.readyState = MockXMLHttpRequest.DONE;
-        that.dispatchEvent(
-          new Event("readystatechange" /*, false, false, that*/)
-        );
-        that.dispatchEvent(new Event("load" /*, false, false, that*/));
-        that.dispatchEvent(new Event("loadend" /*, false, false, that*/));
+        that.dispatchEvent(new Event('readystatechange' /*, false, false, that*/));
+        that.dispatchEvent(new Event('load' /*, false, false, that*/));
+        that.dispatchEvent(new Event('loadend' /*, false, false, that*/));
       }
     },
     // https://xhr.spec.whatwg.org/#the-abort()-method
@@ -246,16 +243,16 @@ export default function createServer(handler) {
 
       // 拦截 XHR
       this.readyState = MockXMLHttpRequest.UNSENT;
-      this.dispatchEvent(new Event("abort", false, false, this));
-      this.dispatchEvent(new Event("error", false, false, this));
-    }
+      this.dispatchEvent(new Event('abort', false, false, this));
+      this.dispatchEvent(new Event('error', false, false, this));
+    },
   });
 
   // 初始化 Response 相关的属性和方法
   Util.extend(MockXMLHttpRequest.prototype, {
-    responseURL: "",
+    responseURL: '',
     status: MockXMLHttpRequest.UNSENT,
-    statusText: "",
+    statusText: '',
     // https://xhr.spec.whatwg.org/#the-getresponseheader()-method
     getResponseHeader: function(name) {
       // 原生 XHR
@@ -276,18 +273,18 @@ export default function createServer(handler) {
 
       // 拦截 XHR
       var responseHeaders = this.custom.responseHeaders;
-      var headers = "";
+      var headers = '';
       for (var h in responseHeaders) {
         if (!responseHeaders.hasOwnProperty(h)) continue;
-        headers += h + ": " + responseHeaders[h] + "\r\n";
+        headers += h + ': ' + responseHeaders[h] + '\r\n';
       }
       return headers;
     },
     overrideMimeType: function(/*mime*/) {},
-    responseType: "", // '', 'text', 'arraybuffer', 'blob', 'document', 'json'
+    responseType: '', // '', 'text', 'arraybuffer', 'blob', 'document', 'json'
     response: null,
-    responseText: "",
-    responseXML: null
+    responseText: '',
+    responseXML: null,
   });
 
   // EventTarget
@@ -311,35 +308,37 @@ export default function createServer(handler) {
         handles[i].call(this, event);
       }
 
-      var ontype = "on" + event.type;
+      var ontype = 'on' + event.type;
       if (this[ontype]) this[ontype](event);
-    }
+    },
   });
 
   // Inspired by jQuery
   function createNativeXMLHttpRequest() {
     var isLocal = (function() {
       var rlocalProtocol = /^(?:about|app|app-storage|.+-extension|file|res|widget):$/;
-      var rurl = /^([\w.+-]+:)(?:\/\/([^\/?#:]*)(?::(\d+)|)|)/;
+      var rurl = /^([\w.+-]+:)(?:\/\/([^/?#:]*)(?::(\d+)|)|)/;
       var ajaxLocation = location.href;
       var ajaxLocParts = rurl.exec(ajaxLocation.toLowerCase()) || [];
       return rlocalProtocol.test(ajaxLocParts[1]);
     })();
 
-    return window.ActiveXObject
-      ? (!isLocal && createStandardXHR()) || createActiveXHR()
-      : createStandardXHR();
+    return window.ActiveXObject ? (!isLocal && createStandardXHR()) || createActiveXHR() : createStandardXHR();
 
     function createStandardXHR() {
       try {
         return new window._XMLHttpRequest();
-      } catch (e) {}
+      } catch (e) {
+        // ignore
+      }
     }
 
     function createActiveXHR() {
       try {
-        return new window._ActiveXObject("Microsoft.XMLHTTP");
-      } catch (e) {}
+        return new window._ActiveXObject('Microsoft.XMLHTTP');
+      } catch (e) {
+        // ignore
+      }
     }
   }
 }
